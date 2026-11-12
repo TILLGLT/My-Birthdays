@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <title>My Birthdays™ App</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="alternate icon" href="favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    #replit-badge,
+    [data-replit-badge],
+    .replit-badge,
+    iframe[src*="replit.com/badge"],
+    div[class*="replit-badge"],
+    a[href*="replit.com/badge"],
+    div[id^="replit"],
+    iframe[id^="replit"] {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+      width: 0 !important;
+      height: 0 !important;
+    }
+  </style>
+  <script>
+    (function () {
+      function removeReplitBadge() {
+        const selectors = [
+          '#replit-badge',
+          '[data-replit-badge]',
+          'iframe[src*="replit"]',
+          'div[id^="replit"]',
+          'iframe[id^="replit"]',
+        ];
+        selectors.forEach(function (sel) {
+          document.querySelectorAll(sel).forEach(function (el) { el.remove(); });
+        });
+      }
+      const observer = new MutationObserver(removeReplitBadge);
+      document.addEventListener('DOMContentLoaded', function () {
+        removeReplitBadge();
+        observer.observe(document.body, { childList: true, subtree: true });
+      });
+    })();
+  </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

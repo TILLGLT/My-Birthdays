@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Calendar, List, Bell, Plus, Search } from "lucide-react";
+import { Calendar, List, Bell, Plus, Search, Download, Upload } from "lucide-react";
 import cakeImg from "@/assets/cake.webp";
 import { Birthday } from "../types";
 import { getAllBirthdays, addBirthday, deleteBirthday, updateBirthday, countBirthdays } from "../lib/db";
+import { downloadBirthdayBackup, importBirthdayBackup } from "../lib/backup";
 import { getHolidayNameSet, Holiday } from "../lib/holidays";
 import BirthdayCard from "./BirthdayCard";
 import AddBirthdayModal from "./AddBirthdayModal";
@@ -26,6 +27,35 @@ const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
 export default function Dashboard() {
   const [birthdays, setBirthdays] = useState<Birthday[]>([]);
   const [search, setSearch] = useState("");
+  const importFileRef = useRef<HTMLInputElement>(null);
+  const [backupMessage, setBackupMessage] = useState("");
+  const [backupBusy, setBackupBusy] = useState(false);
+
+  async function handleExport() {
+    setBackupBusy(true);
+    try {
+      const count = await downloadBirthdayBackup();
+      setBackupMessage(`Backup downloaded with ${count} birthday${count === 1 ? "" : "s"}. Keep the file private.`);
+    } catch (error) {
+      setBackupMessage(error instanceof Error ? error.message : "Unable to export birthdays.");
+    } finally { setBackupBusy(false); }
+  }
+
+  async function handleImport(file: File | undefined) {
+    if (!file) return;
+    setBackupBusy(true);
+    try {
+      const result = await importBirthdayBackup(file);
+      await loadBirthdays();
+      setBackupMessage(`Restored ${result.added} birthday${result.added === 1 ? "" : "s"}; ${result.skipped} already saved here.`);
+    } catch (error) {
+      setBackupMessage(error instanceof Error ? error.message : "Unable to import backup.");
+    } finally {
+      if (importFileRef.current) importFileRef.current.value = "";
+      setBackupBusy(false);
+    }
+  }
+
   const [showAdd, setShowAdd] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -165,6 +195,22 @@ export default function Dashboard() {
             </div>
           </div>
 
+          <div className="flex flex-wrap gap-2 mb-3" aria-label="Birthday backup options">
+            <button type="button" disabled={backupBusy} onClick={handleExport}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs text-white disabled:opacity-50"
+              style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.18)" }}>
+              <Download size={14}/> Export backup
+            </button>
+            <button type="button" disabled={backupBusy} onClick={() => importFileRef.current?.click()}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs text-white disabled:opacity-50"
+              style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.18)" }}>
+              <Upload size={14}/> Import backup
+            </button>
+            <input type="file" accept=".json,application/json" ref={importFileRef}
+              className="hidden" aria-label="Choose My Birthdays backup file"
+              onChange={(e) => { void handleImport(e.target.files?.[0]); }} />
+          </div>
+          {backupMessage && <div role="status" className="text-xs text-white/75 mb-3">{backupMessage}</div>}
           <div className="nav-container" style={{ padding: "0", gap: "8px" }}>
             {TABS.map((tab) => {
               const Icon = tab.icon;
@@ -214,7 +260,7 @@ export default function Dashboard() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-2xl mx-auto px-4 pt-36 pb-32">
+      <div className="max-w-2xl mx-auto px-4 pt-48 pb-32">
         <AnimatePresence mode="wait">
           {activeTab === "birthdays" && (
             <motion.div
